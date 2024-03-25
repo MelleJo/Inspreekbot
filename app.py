@@ -11,7 +11,7 @@ if audio_upload is not None:
     supported_formats = ['flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm']
 
     if file_extension in supported_formats:
-        audio_file = audio_upload.getvalue()
+        audio_file = audio_upload.read()
         transcription = client.audio.transcriptions.create(
             model="whisper-1",
             file=audio_file
