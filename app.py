@@ -1,5 +1,5 @@
 import streamlit as st
-from openai import OpenAI
+from openai import OpenAI, error
 import os
 import tempfile
 import wave
@@ -8,9 +8,7 @@ import time
 
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-upload_or_record = st.radio("Upload or Record Audio", ["Upload", "Record"])
-
-if upload_or_record == "Upload":
+def handle_file_upload():
     audio_upload = st.file_uploader("Upload an audio file", type=["wav", "mp3", "flac", "m4a", "mp4", "mpeg", "mpga", "oga", "ogg", "webm"])
 
     if audio_upload is not None:
@@ -20,46 +18,46 @@ if upload_or_record == "Upload":
         if file_extension in supported_formats:
             with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_extension}") as temp_file:
                 temp_file.write(audio_upload.getvalue())
-                temp_file_path = temp_file.name
+                temp_file_path = os.path.join(tempfile.gettempdir(), temp_file.name)
 
-            with open(temp_file_path, "rb") as temp_file:
-                transcription = client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=temp_file
-                )
-
-            st.write(transcription)
+            transcription = transcribe_audio(temp_file_path)
             os.remove(temp_file_path)
         else:
             st.error(f"File format '{file_extension}' is not supported. Please upload a file in one of the following formats: {', '.join(supported_formats)}")
 
-elif upload_or_record == "Record":
+def handle_live_recording():
     st.write("Click the 'Start Recording' button to begin recording your voice.")
     start_recording = st.button("Start Recording")
 
     if start_recording:
-        st.write("Recording...")
+        try:
+            st.write("Recording...")
+            recorded_audio = st.pyplot(record_audio())
 
-        # Record audio using JavaScript
-        recorded_audio = st.pyplot(record_audio())
+            if recorded_audio is not None:
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_file:
+                    temp_file_path = os.path.join(tempfile.gettempdir(), temp_file.name)
+                    with wave.open(temp_file_path, "wb") as wave_file:
+                        wave_file.setnchannels(1)
+                        wave_file.setsampwidth(2)
+                        wave_file.setframerate(16000)
+                        wave_file.writeframes(base64.b64decode(recorded_audio.split(",")[1]))
 
-        if recorded_audio is not None:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_file:
-                with wave.open(temp_file.name, "wb") as wave_file:
-                    wave_file.setnchannels(1)
-                    wave_file.setsampwidth(2)
-                    wave_file.setframerate(16000)
-                    wave_file.writeframes(base64.b64decode(recorded_audio.split(",")[1]))
-                temp_file_path = temp_file.name
+                    transcription = transcribe_audio(temp_file_path)
+                    os.remove(temp_file_path)
+        except Exception as e:
+            st.error(f"Error recording audio: {e}")
 
-            with open(temp_file_path, "rb") as temp_file:
-                transcription = client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=temp_file
-                )
-
-            st.write(transcription)
-            os.remove(temp_file_path)
+def transcribe_audio(audio_file_path):
+    try:
+        with open(audio_file_path, "rb") as temp_file:
+            transcription = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=temp_file
+            )
+        st.write(transcription)
+    except error.OpenAIError as e:
+        st.error(f"OpenAI API Error: {e}")
 
 @st.cache_data
 def record_audio():
@@ -122,7 +120,11 @@ def record_audio():
         };
 
         navigator.mediaDevices.getUserMedia({ audio: true })
-            .then(handleSuccess);
+            .then(handleSuccess)
+            .catch(function(error) {
+                Streamlit.setComponentValue(null);
+                alert('Error accessing microphone: ' + error.message);
+            });
     """ % st.session_state.get("max_recording_time", 10)
 
     # Record audio for a maximum of 10 seconds (can be changed)
@@ -141,3 +143,10 @@ def record_audio():
 
     if audio_data is not None:
         return audio_data
+
+upload_or_record = st.radio("Upload or Record Audio", ["Upload", "Record"])
+
+if upload_or_record == "Upload":
+    handle_file_upload()
+elif upload_or_record == "Record":
+    handle_live_recording()
