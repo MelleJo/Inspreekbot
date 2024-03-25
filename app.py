@@ -1,6 +1,7 @@
 import streamlit as st
 from openai import OpenAI
 import os
+import tempfile
 
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
@@ -11,12 +12,16 @@ if audio_upload is not None:
     supported_formats = ['flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm']
 
     if file_extension in supported_formats:
-        audio_file = audio_upload.read()
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_extension}") as temp_file:
+            temp_file.write(audio_upload.getvalue())
+            temp_file_path = temp_file.name
+
         transcription = client.audio.transcriptions.create(
             model="whisper-1",
-            file=audio_file
+            file=temp_file_path
         )
 
         st.write(transcription)
+        os.remove(temp_file_path)
     else:
         st.error(f"File format '{file_extension}' is not supported. Please upload a file in one of the following formats: {', '.join(supported_formats)}")
