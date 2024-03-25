@@ -1,5 +1,5 @@
 import streamlit as st
-import openai
+from openai import OpenAI
 from streamlit_mic_recorder import mic_recorder
 import tempfile
 import os
