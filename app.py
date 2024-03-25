@@ -22,12 +22,19 @@ if upload_or_record == "Record":
                               use_container_width=True,
                               format="webm",
                               key="recorder")
-    
-    # Check if 'audio' key exists in audio_data
-    if audio_data is not None and 'audio' in audio_data:
-        audio_upload = audio_data['audio']
+
+    # Check if recording was successful and data is not None
+    if audio_data is not None and audio_data.get("blob") is not None:
+        audio_blob = audio_data.get("blob")
+
+        # Convert the audio blob to a BytesIO object
+        import base64
+        import io
+        audio_bytes = base64.b64decode(audio_blob.split(",")[1])
+        audio_upload = io.BytesIO(audio_bytes)
     else:
         st.error("No audio data was found. Please ensure you have recorded something.")
+
 
 
 def transcribe_audio(audio_file):
