@@ -9,7 +9,7 @@ openai_client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # UI for choosing between upload or record
 upload_or_record = st.radio("Upload or record audio?", ("Upload", "Record"))
-
+audio_file_io = None  # Initialize audio_file_io
 
 # Handle file upload
 if upload_or_record == "Upload":
@@ -17,7 +17,7 @@ if upload_or_record == "Upload":
     if audio_upload:
         audio_bytes = audio_upload.read()
         audio_file_io = io.BytesIO(audio_bytes)
-else:
+elif upload_or_record == "Record":
     # Handle audio recording
     audio_data = mic_recorder(start_prompt="Start recording",
                               stop_prompt="Stop recording",
@@ -27,25 +27,25 @@ else:
                               key="recorder")
     if audio_data and 'bytes' in audio_data:
         audio_file_io = io.BytesIO(audio_data['bytes'])
-    else:
-        audio_file_io = None
 
-# Convert audio to WAV format
+# Define function to convert audio to WAV format
+# Ensure this function checks if audio_file_io is not None
 def convert_audio_to_wav(audio_bytes_io):
-    audio = AudioSegment.from_file(audio_bytes_io, format="webm")
-    audio_io = io.BytesIO()
-    audio.export(audio_io, format="wav")
-    audio_io.seek(0)
-    return audio_io
+    if audio_bytes_io:
+        audio = AudioSegment.from_file(audio_bytes_io, format="webm")
+        audio_io = io.BytesIO()
+        audio.export(audio_io, format="wav")
+        audio_io.seek(0)
+        return audio_io
 
-# Transcribe audio
+# Transcribe audio if audio_file_io is not None
 if audio_file_io:
     audio_file_io_wav = convert_audio_to_wav(audio_file_io)
-    transcription = openai_client.audio.transcriptions.create(
-        model="whisper-1",
-        file=audio_file_io_wav
-    )
-    st.write(transcription)
+    if audio_file_io_wav:  # Check if conversion was successful
+        transcription = openai_client.audio.transcriptions.create(
+            model="whisper-1",
+            file=audio_file_io_wav
+        )
+        st.write(transcription)
 else:
     st.info("Please upload or record an audio file for transcription.")
-
