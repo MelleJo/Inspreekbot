@@ -1,5 +1,5 @@
 import streamlit as st
-from openai import OpenAI, error
+from openai import OpenAI
 import os
 import tempfile
 import wave
@@ -56,8 +56,8 @@ def transcribe_audio(audio_file_path):
                 file=temp_file
             )
         st.write(transcription)
-    except error.OpenAIError as e:
-        st.error(f"OpenAI API Error: {e}")
+    except Exception as e:
+        st.error(f"OpenAI API Error: {str(e)}")
 
 @st.cache_data
 def record_audio():
