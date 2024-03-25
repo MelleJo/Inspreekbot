@@ -9,14 +9,20 @@ def transcribe_audio(audio_bytes, openai_api_key):
     audio_bio = io.BytesIO(audio_bytes)
     audio_bio.name = 'audio.webm'
     try:
-        transcript = openai_client.audio.transcriptions.create(
+        # Create transcription
+        transcription_response = openai_client.audio.transcriptions.create(
             model="whisper-1",
             file=audio_bio
         )
-        return transcript['text']
+        
+        # Assuming the transcription text can be accessed directly (adjust as necessary)
+        # Check the OpenAI API documentation or inspect the transcription_response object for the correct field
+        transcript_text = transcription_response['text'] if 'text' in transcription_response else "Transcription text not found."
+        return transcript_text
     except Exception as e:
         st.error(f"Transcription failed: {e}")
         return None
+
 
 # Streamlit UI
 st.title("Audio Transcription App")
