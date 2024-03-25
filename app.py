@@ -13,8 +13,8 @@ if audio_upload is not None:
 
     if file_extension in supported_formats:
         with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_extension}") as temp_file:
-            temp_file.write(audio_upload.getvalue())
             temp_file_path = temp_file.name
+            temp_file.write(audio_upload.getvalue())
 
         transcription = client.audio.transcriptions.create(
             model="whisper-1",
