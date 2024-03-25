@@ -1,28 +1,52 @@
 import streamlit as st
+from streamlit_mic_recorder import mic_recorder
 from openai import OpenAI
 import os
 import tempfile
 
+# Initialize OpenAI client
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-audio_upload = st.file_uploader("Upload an audio file", type=["wav", "mp3", "flac", "m4a", "mp4", "mpeg", "mpga", "oga", "ogg", "webm"])
+# UI for upload or record choice
+upload_or_record = st.radio("Upload or record audio?", ("Upload", "Record"))
+audio_upload = None  # Initialize to avoid reference errors
+
+if upload_or_record == "Upload":
+    audio_upload = st.file_uploader("Upload an audio file", type=["wav", "mp3", "flac", "m4a", "mp4", "mpeg", "mpga", "oga", "ogg", "webm"])
+
+elif upload_or_record == "Record":
+    audio_data = mic_recorder(start_prompt="Start recording",
+                              stop_prompt="Stop recording",
+                              just_once=False,
+                              use_container_width=True,
+                              format="webm",
+                              key="recorder")
+
+    if audio_data is not None:
+        audio_upload = audio_data["audio"]
+
+def transcribe_audio(audio_file):
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp_file:
+        temp_file.write(audio_file.read())
+        temp_file_path = temp_file.name
+
+    # Convert to appropriate format if necessary before sending for transcription
+    # Additional conversion logic might be required here
+
+    with open(temp_file_path, "rb") as temp_file:
+        transcription = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=temp_file
+        )
+    
+    os.remove(temp_file_path)
+    return transcription
 
 if audio_upload is not None:
-    file_extension = os.path.splitext(audio_upload.name)[1][1:].lower()
-    supported_formats = ['flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm']
-
-    if file_extension in supported_formats:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_extension}") as temp_file:
-            temp_file.write(audio_upload.getvalue())
-            temp_file_path = temp_file.name
-
-        with open(temp_file_path, "rb") as temp_file:
-            transcription = client.audio.transcriptions.create(
-                model="whisper-1",
-                file=temp_file
-            )
-
-        st.write(transcription)
-        os.remove(temp_file_path)
-    else:
-        st.error(f"File format '{file_extension}' is not supported. Please upload a file in one of the following formats: {', '.join(supported_formats)}")
+    try:
+        transcription_result = transcribe_audio(audio_upload)
+        st.write(transcription_result)
+    except Exception as e:
+        st.error(f"An error occurred during transcription: {str(e)}")
+else:
+    st.info("Please upload or record an audio file for transcription.")
