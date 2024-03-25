@@ -4,7 +4,7 @@ from streamlit_mic_recorder import mic_recorder
 import tempfile
 import os
 
-
+# Initialize the OpenAI client with your API key
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def transcribe_audio(file_path):
@@ -13,12 +13,12 @@ def transcribe_audio(file_path):
     """
     try:
         with open(file_path, "rb") as audio_file:
-            transcription = client.audio.transcripttion.create(
+            transcription_response = client.transcriptions.create(
                 model="whisper-1",
                 file=audio_file,
             )
-            # Assuming the response contains a 'text' field with the transcription.
-            transcript_text = transcription('text', "Transcription text not found.")
+            # Assuming the response correctly contains a 'text' attribute with the transcription
+            transcript_text = transcription_response.get('text', "Transcription text not found.")
             return transcript_text
     except Exception as e:
         st.error(f"Transcription failed: {str(e)}")
