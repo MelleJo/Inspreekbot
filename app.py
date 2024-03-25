@@ -13,7 +13,7 @@ def transcribe_audio(file_path):
     """
     try:
         with open(file_path, "rb") as audio_file:
-            transcription_response = openai.transcriptions.create(
+            transcription_response = openai.transcription.create(
                 model="whisper-1",
                 file=audio_file,
             )
