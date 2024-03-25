@@ -10,6 +10,7 @@ openai_client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 # UI for choosing between upload or record
 upload_or_record = st.radio("Upload or record audio?", ("Upload", "Record"))
 
+
 # Handle file upload
 if upload_or_record == "Upload":
     audio_upload = st.file_uploader("Upload an audio file", type=["wav", "mp3", "flac", "m4a", "mp4", "mpeg", "mpga", "oga", "ogg", "webm"])
