@@ -1,5 +1,5 @@
 openai
 streamlit
 streamlit-mic-recorder
-pydubSS
+pydub
 ffmpeg
