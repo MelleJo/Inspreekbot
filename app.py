@@ -14,16 +14,21 @@ audio_upload = None  # Initialize to avoid reference errors
 if upload_or_record == "Upload":
     audio_upload = st.file_uploader("Upload an audio file", type=["wav", "mp3", "flac", "m4a", "mp4", "mpeg", "mpga", "oga", "ogg", "webm"])
 
-elif upload_or_record == "Record":
+# Handling the Recorded Audio
+if upload_or_record == "Record":
     audio_data = mic_recorder(start_prompt="Start recording",
                               stop_prompt="Stop recording",
                               just_once=False,
                               use_container_width=True,
                               format="webm",
                               key="recorder")
+    
+    # Check if 'audio' key exists in audio_data
+    if audio_data is not None and 'audio' in audio_data:
+        audio_upload = audio_data['audio']
+    else:
+        st.error("No audio data was found. Please ensure you have recorded something.")
 
-    if audio_data is not None:
-        audio_upload = audio_data["audio"]
 
 def transcribe_audio(audio_file):
     with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp_file:
