@@ -1,51 +1,58 @@
 import streamlit as st
 from streamlit_mic_recorder import mic_recorder
-from openai import OpenAI
-from pydub import AudioSegment
+import openai
 import io
 
-# Initialize OpenAI client with your API key
-openai_client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-
-# UI for choosing between upload or record
-upload_or_record = st.radio("Upload or record audio?", ("Upload", "Record"))
-audio_file_io = None  # Initialize audio_file_io
-
-# Handle file upload
-if upload_or_record == "Upload":
-    audio_upload = st.file_uploader("Upload an audio file", type=["wav", "mp3", "flac", "m4a", "mp4", "mpeg", "mpga", "oga", "ogg", "webm"])
-    if audio_upload:
-        audio_bytes = audio_upload.read()
-        audio_file_io = io.BytesIO(audio_bytes)
-elif upload_or_record == "Record":
-    # Handle audio recording
-    audio_data = mic_recorder(start_prompt="Start recording",
-                              stop_prompt="Stop recording",
-                              just_once=False,
-                              use_container_width=True,
-                              format="webm",
-                              key="recorder")
-    if audio_data and 'bytes' in audio_data:
-        audio_file_io = io.BytesIO(audio_data['bytes'])
-
-# Define function to convert audio to WAV format
-# Ensure this function checks if audio_file_io is not None
-def convert_audio_to_wav(audio_bytes_io):
-    if audio_bytes_io:
-        audio = AudioSegment.from_file(audio_bytes_io, format="webm")
-        audio_io = io.BytesIO()
-        audio.export(audio_io, format="wav")
-        audio_io.seek(0)
-        return audio_io
-
-# Transcribe audio if audio_file_io is not None
-if audio_file_io:
-    audio_file_io_wav = convert_audio_to_wav(audio_file_io)
-    if audio_file_io_wav:  # Check if conversion was successful
-        transcription = openai_client.audio.transcriptions.create(
+# Function to initialize OpenAI client and transcribe audio
+def transcribe_audio(audio_bytes, openai_api_key):
+    openai_client = openai.OpenAI(api_key=openai_api_key)
+    audio_bio = io.BytesIO(audio_bytes)
+    audio_bio.name = 'audio.webm'
+    try:
+        transcript = openai_client.audio.transcriptions.create(
             model="whisper-1",
-            file=audio_file_io_wav
+            file=audio_bio
         )
-        st.write(transcription)
-else:
-    st.info("Please upload or record an audio file for transcription.")
+        return transcript['text']
+    except Exception as e:
+        st.error(f"Transcription failed: {e}")
+        return None
+
+# Streamlit UI
+st.title("Audio Transcription App")
+
+# Load OpenAI API key
+openai_api_key = st.secrets["OPENAI_API_KEY"]
+
+# Record or upload audio
+upload_or_record = st.radio("Do you want to upload audio or record?", ("Upload", "Record"))
+
+if upload_or_record == "Upload":
+    uploaded_file = st.file_uploader("Choose an audio file", type=["webm", "mp3", "wav", "ogg", "m4a"])
+    if uploaded_file is not None:
+        bytes_data = uploaded_file.getvalue()
+        transcript = transcribe_audio(bytes_data, openai_api_key)
+        if transcript:
+            st.text(transcript)
+        else:
+            st.write("Upload a file to see the transcription.")
+elif upload_or_record == "Record":
+    audio_data = mic_recorder(
+        start_prompt="Start recording",
+        stop_prompt="Stop recording",
+        just_once=False,
+        use_container_width=True,
+        format="webm",
+        key="recorder"
+    )
+    
+    if audio_data and 'bytes' in audio_data:
+        st.audio(audio_data['bytes'], format='audio/webm')
+        if st.button('Transcribe'):
+            transcript = transcribe_audio(audio_data['bytes'], openai_api_key)
+            if transcript:
+                st.text(transcript)
+            else:
+                st.write("Please record something to transcribe.")
+    else:
+        st.write("Click 'Start recording' to record audio.")
