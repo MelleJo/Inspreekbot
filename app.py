@@ -7,11 +7,10 @@ import os
 # Initialize the OpenAI client with your API key
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-def transcribe_audio(file_path):
-    """ Transcribes the audio file using OpenAI's Whisper model. """
+def transcribe_audio(tmp_audio):
     try:
-        with open(file_path, "rb") as audio_file:
-            transcript = client.audio.transcribe("whisper-1", audio_file)
+        with open(tmp_audio, "rb") as audio_file:
+            transcript = client.audio.transcribe("whisper-1", tmp_audio)
             transcript_text = transcript["text"]
             return transcript_text
     except Exception as e:
