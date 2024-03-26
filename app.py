@@ -11,11 +11,8 @@ def transcribe_audio(file_path):
     """ Transcribes the audio file using OpenAI's Whisper model. """
     try:
         with open(file_path, "rb") as audio_file:
-            transcription_response = client.transcriptions.create(
-                model="whisper-1",
-                file=audio_file,
-            )
-            transcript_text = transcription_response.get('text', "Transcription text not found.")
+            transcript = client.audio.transcribe("whisper-1", audio_file)
+            transcript_text = transcript["text"]
             return transcript_text
     except Exception as e:
         st.error(f"Transcription failed: {str(e)}")
