@@ -8,16 +8,13 @@ import os
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def transcribe_audio(file_path):
-    """
-    Transcribes the audio file using OpenAI's Whisper model.
-    """
+    """ Transcribes the audio file using OpenAI's Whisper model. """
     try:
         with open(file_path, "rb") as audio_file:
             transcription_response = client.transcriptions.create(
                 model="whisper-1",
                 file=audio_file,
             )
-            # Assuming the response correctly contains a 'text' attribute with the transcription
             transcript_text = transcription_response.get('text', "Transcription text not found.")
             return transcript_text
     except Exception as e:
